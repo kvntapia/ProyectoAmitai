@@ -1,0 +1,169 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+  /* Fondo degradado celeste ocupando todo el navegador */
+  background: linear-gradient(180deg, #9fd3f8 0%, #c4e9ff 100%);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Barra de navegación */
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 48px;
+  width: 100%;
+}
+
+.logo {
+  font-size: 52px;
+  font-weight: 900;
+  color: #111;
+  position: relative;
+  letter-spacing: -2px;
+  user-select: none;
+}
+
+.logo::after {
+  content: "︶";
+  position: absolute;
+  left: 6px;
+  bottom: -20px;
+  font-size: 38px;
+  color: #e67a00;
+}
+
+/* Buscador centrado */
+.search-box {
+  display: flex;
+  align-items: center;
+  background-color: #ffffff;
+  border-radius: 28px;
+  border: 2px solid #e20096;
+  box-shadow: 2px 2px 0px #e20096;
+  width: 50%;
+  max-width: 650px;
+  height: 48px;
+  padding: 4px 14px;
+}
+
+.search-box input {
+  border: none;
+  outline: none;
+  width: 100%;
+  font-size: 16px;
+  background: transparent;
+}
+
+.search-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #444;
+  display: flex;
+  align-items: center;
+}
+
+/* Iconos de usuario y carrito */
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.icon-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-btn span {
+  font-size: 48px;
+  color: #111;
+}
+
+.cart-btn {
+  border: 3px solid #ff8800;
+  border-radius: 50%;
+  padding: 5px;
+}
+
+.cart-btn span {
+  font-size: 32px;
+  color: #ff8800;
+}
+
+/* Catálogo */
+.catalog {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 40px;
+  padding: 40px 24px 80px;
+  flex-wrap: wrap;
+}
+
+.product-card {
+  background-color: #bcc6ce;
+  width: 270px;
+  padding: 30px 20px 25px;
+  border-radius: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.image-wrapper img {
+  width: 150px;
+  height: 220px;
+  object-fit: contain;
+  margin-bottom: 16px;
+  border-radius: 8px;
+}
+
+.product-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: #111;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.product-price {
+  font-size: 16px;
+  font-weight: 700;
+  color: #222;
+  margin-bottom: 20px;
+}
+
+/* Botón fucsia */
+.add-cart-btn {
+  background-color: #f125b6;
+  color: #ffffff;
+  border: none;
+  padding: 12px 18px;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.1s ease, opacity 0.2s;
+  width: 90%;
+}
+
+.add-cart-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+}

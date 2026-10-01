@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tienda de Celulares</title>
+  <!-- Ruta estática para Flask -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='diseño.css') }}">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+</head>
+<body>
+
+  <header class="navbar">
+    <div class="logo">a<span></span></div>
+
+    <div class="search-box">
+      <input type="text" placeholder="Buscar celular...">
+      <button type="button" class="search-btn">
+        <span class="material-symbols-outlined">search</span>
+      </button>
+    </div>
+
+    <div class="nav-actions">
+      <button class="icon-btn" title="Perfil">
+        <span class="material-symbols-outlined">account_circle</span>
+      </button>
+      <button class="icon-btn cart-btn" title="Carrito">
+        <span class="material-symbols-outlined">shopping_cart</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="catalog">
+    {% for producto in productos %}
+    <article class="product-card">
+      <div class="image-wrapper">
+        <img src="{{ producto.imagen_url }}" alt="{{ producto.modelo }}">
+      </div>
+      <h3 class="product-title">{{ producto.modelo }}</h3>
+      <p class="product-price">${{ "{:,.2f}".format(producto.precio) }}</p>
+      <button class="add-cart-btn">AGREGAR AL CARRITO</button>
+    </article>
+    {% else %}
+      <p style="color: #444; font-size: 18px;">No hay productos registrados en el catálogo aún.</p>
+    {% endfor %}
+  </main>
+
+</body>
+</html>
