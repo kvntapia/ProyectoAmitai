@@ -25,6 +25,7 @@
       padding: 1.25rem 0;
       border-bottom: 1px solid #f1f5f9;
       gap: 1rem;
+      flex-wrap: wrap;
     }
     .cart-item img {
       width: 70px;
@@ -34,10 +35,44 @@
       border-radius: 8px;
       padding: 4px;
     }
-    .item-details { flex: 1; }
+    .item-details { flex: 1; min-width: 180px; }
     .item-details h4 { font-size: 1.05rem; margin-bottom: 0.2rem; }
     .item-details span { font-size: 0.85rem; color: #64748b; }
-    .item-price { font-size: 1.15rem; font-weight: 700; color: #0f172a; }
+    .qty-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 0.25rem 0.5rem;
+    }
+    .qty-btn {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      color: #0f172a;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+    .qty-btn:hover { background: #2563eb; color: #ffffff; border-color: #2563eb; }
+    .qty-value { font-weight: 700; min-width: 24px; text-align: center; font-size: 0.95rem; }
+    .item-price { font-size: 1.15rem; font-weight: 700; color: #0f172a; min-width: 110px; text-align: right; }
+    .btn-remove-item {
+      color: #94a3b8;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      padding: 0.35rem;
+      border-radius: 6px;
+    }
+    .btn-remove-item:hover { color: #dc2626; background: #fee2e2; }
     .cart-summary {
       margin-top: 2rem;
       display: flex;
@@ -45,6 +80,8 @@
       align-items: center;
       padding-top: 1.5rem;
       border-top: 2px solid #e2e8f0;
+      flex-wrap: wrap;
+      gap: 1rem;
     }
     .summary-total { font-size: 1.4rem; font-weight: 800; color: #2563eb; }
     .cart-buttons { display: flex; gap: 1rem; }
@@ -60,12 +97,11 @@
   </style>
 </head>
 <body style="background-color: #f8fafc;">
-
   <header class="navbar">
     <div class="nav-container">
       <a href="/" class="brand-logo">
         <span class="material-symbols-outlined logo-icon">smartphone</span>
-        <span class="brand-name">AMITAI<span>Store</span></span>
+        <span class="brand-name">Pro<span>Device</span></span>
       </a>
       <a href="/" class="action-btn" style="text-decoration: none;">← Seguir comprando</a>
     </div>
@@ -81,11 +117,22 @@
             <img src="{{ item.imagen_url }}" alt="{{ item.modelo }}">
             <div class="item-details">
               <h4>{{ item.modelo }}</h4>
-              <span>Marca: {{ item.marca }} | Cantidad: {{ item.cantidad }}</span>
+              <span>Marca: {{ item.marca }} | Precio unitario: ${{ "{:,.2f}".format(item.precio) }}</span>
             </div>
+
+            <div class="qty-controls">
+              <a href="/actualizar-carrito/{{ item.id_producto }}/restar" class="qty-btn">−</a>
+              <span class="qty-value">{{ item.cantidad }}</span>
+              <a href="/actualizar-carrito/{{ item.id_producto }}/sumar" class="qty-btn">+</a>
+            </div>
+
             <div class="item-price">
               ${{ "{:,.2f}".format(item.precio * item.cantidad) }}
             </div>
+
+            <a href="/actualizar-carrito/{{ item.id_producto }}/eliminar" class="btn-remove-item" title="Quitar producto">
+              <span class="material-symbols-outlined">delete</span>
+            </a>
           </div>
         {% endfor %}
 
@@ -97,8 +144,8 @@
           <div class="cart-buttons">
             <a href="/vaciar-carrito" class="btn-clear">Vaciar Carrito</a>
             <a href="/checkout" class="buy-btn" style="text-decoration: none; width: auto; padding: 0.75rem 2rem;">
-  Proceder al Pago →
-</a>
+              Proceder al Pago →
+            </a>
           </div>
         </div>
       {% else %}
@@ -113,6 +160,5 @@
       {% endif %}
     </div>
   </main>
-
 </body>
 </html>

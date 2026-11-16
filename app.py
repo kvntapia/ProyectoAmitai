@@ -323,6 +323,27 @@ def vaciar_carrito():
     session.pop("carrito", None)
     return redirect(url_for("ver_carrito"))
 
+@app.route("/actualizar-carrito/<int:id_producto>/<accion>")
+def actualizar_carrito(id_producto, accion):
+    carrito = session.get("carrito", [])
+    for item in carrito:
+        if item["id_producto"] == id_producto:
+            if accion == "sumar":
+                item["cantidad"] += 1
+            elif accion == "restar":
+                item["cantidad"] -= 1
+            break
+
+    # Filtrar artículos cuya cantidad haya llegado a 0 o hayan sido eliminados
+    if accion == "eliminar":
+        carrito = [item for item in carrito if item["id_producto"] != id_producto]
+    else:
+        carrito = [item for item in carrito if item["cantidad"] > 0]
+
+    session["carrito"] = carrito
+    session.modified = True
+    return redirect(url_for("ver_carrito"))
+
 @app.route("/checkout", methods=["GET", "POST"])
 def checkout():
     carrito = session.get("carrito", [])
