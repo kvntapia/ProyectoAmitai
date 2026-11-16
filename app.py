@@ -334,21 +334,44 @@ def checkout():
     total = subtotal + costo_envio
 
     if request.method == "POST":
-        nombre = request.form.get("nombre")
-        email = request.form.get("email")
-        direccion = request.form.get("direccion")
-        ciudad = request.form.get("ciudad")
+        nombre = request.form.get("nombre", "").strip()
+        email = request.form.get("email", "").strip()
+        direccion = request.form.get("direccion", "").strip()
+        ciudad = request.form.get("ciudad", "").strip()
+        cp = request.form.get("cp", "").strip()
         metodo_pago = request.form.get("metodo_pago", "Tarjeta")
 
-        # Generar folio de pedido simulado
+        direccion_completa = f"{direccion}, {ciudad} (CP {cp})"
         numero_orden = f"PD-{random.randint(100000, 999999)}"
         fecha_orden = datetime.now().strftime("%d/%m/%Y %H:%M")
+
+        # Guardar orden y sus artículos en Aiven
+        try:
+            conexion = obtener_conexion()
+            with conexion.cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO ordenes (folio, cliente_nombre, cliente_email, direccion_envio, metodo_pago, subtotal, costo_envio, total)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """, (numero_orden, nombre, email, direccion_completa, metodo_pago, subtotal, costo_envio, total))
+                id_orden_creada = cursor.lastrowid
+
+                for item in carrito:
+                    cursor.execute("""
+                        INSERT INTO detalle_orden (id_orden, id_producto, modelo_producto, cantidad, precio_unitario)
+                        VALUES (%s, %s, %s, %s, %s)
+                    """, (id_orden_creada, item["id_producto"], item["modelo"], item["cantidad"], item["precio"]))
+
+            conexion.commit()
+            conexion.close()
+            print(f"--> Orden {numero_orden} registrada en Aiven correctamente.")
+        except Exception as err:
+            print(f"--> Error guardando orden en Aiven: {err}")
 
         detalles_orden = {
             "folio": numero_orden,
             "cliente": nombre,
             "email": email,
-            "direccion": f"{direccion}, {ciudad}",
+            "direccion": direccion_completa,
             "metodo_pago": metodo_pago,
             "articulos": list(carrito),
             "subtotal": subtotal,
@@ -357,13 +380,32 @@ def checkout():
             "fecha": fecha_orden
         }
 
-        # Guardar en sesión para mostrar el recibo y vaciar carrito
         session["ultima_orden"] = detalles_orden
         session.pop("carrito", None)
-
         return redirect(url_for("confirmacion_pedido"))
 
     return render_template("checkout.html", carrito=carrito, subtotal=subtotal, envio=costo_envio, total=total)
+
+@app.route("/admin/ordenes")
+def ver_ordenes():
+    if not session.get("es_admin"):
+        flash("Acceso restringido únicamente para administradores.")
+        return redirect(url_for("login"))
+
+    ordenes = []
+    try:
+        conexion = obtener_conexion()
+        with conexion.cursor() as cursor:
+            cursor.execute("SELECT * FROM ordenes ORDER BY fecha_orden DESC")
+            ordenes = cursor.fetchall()
+            for o in ordenes:
+                cursor.execute("SELECT * FROM detalle_orden WHERE id_orden = %s", (o["id_orden"],))
+                o["detalles"] = cursor.fetchall()
+        conexion.close()
+    except Exception as err:
+        print(f"--> Error consultando órdenes en Aiven: {err}")
+
+    return render_template("ordenes_admin.html", ordenes=ordenes)
 
 @app.route("/confirmacion")
 def confirmacion_pedido():
