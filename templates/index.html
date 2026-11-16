@@ -117,6 +117,10 @@
 
             <!-- Controles exclusivos de Administrador -->
             {% if session.get('es_admin') %}
+            <a href="/admin/nuevo-admin" class="action-btn" style="text-decoration: none;">
+  <span class="material-symbols-outlined">person_add</span>
+  <span class="action-label">+ Admin</span>
+</a>
               <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
                 <a href="/admin/editar-producto/{{ producto.id_producto }}"
                    style="flex: 1; padding: 0.5rem; background: #f1f5f9; color: #0f172a; text-decoration: none; border-radius: 8px; font-size: 0.82rem; font-weight: 600; text-align: center; display: flex; align-items: center; justify-content: center; gap: 0.25rem;">

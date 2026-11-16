@@ -1,6 +1,7 @@
 import os
 import pymysql
 from flask import Flask, render_template, request, redirect, url_for, session, flash
+from werkzeug.security import generate_password_hash, check_password_hash
 import random
 from datetime import datetime
 
@@ -441,7 +442,12 @@ def login():
 
             if usuario:
                 clave_db = usuario.get("password_hash") or usuario.get("password")
-                if clave_db == password:
+                clave_valida = (
+                    clave_db == password or
+                    (clave_db and clave_db.startswith(("scrypt:", "pbkdf2:")) and check_password_hash(clave_db, password))
+                )
+                if clave_valida:
+                    session.permanent = True
                     session["usuario_id"] = usuario.get("id_usuario")
                     session["usuario_nombre"] = usuario.get("nombre")
                     session["es_admin"] = (usuario.get("rol") == "admin")
@@ -452,6 +458,86 @@ def login():
         flash("Credenciales incorrectas. Verifica tu correo o contraseña.")
 
     return render_template("login.html")
+
+from werkzeug.security import generate_password_hash, check_password_hash
+
+# --- REGISTRO PÚBLICO PARA CLIENTES ---
+@app.route("/registro", methods=["GET", "POST"])
+def registro():
+    if request.method == "POST":
+        nombre = request.form.get("nombre", "").strip()
+        apellido_p = request.form.get("apellido_paterno", "").strip()
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "").strip()
+
+        password_segura = generate_password_hash(password)
+
+        try:
+            conexion = obtener_conexion()
+            with conexion.cursor() as cursor:
+                cursor.execute("SELECT id_usuario FROM usuarios WHERE LOWER(email) = %s", (email,))
+                if cursor.fetchone():
+                    flash("Este correo ya está registrado. Intenta iniciar sesión.")
+                    return redirect(url_for("registro"))
+
+                cursor.execute("""
+                    INSERT INTO usuarios (nombre, apellido_paterno, email, password_hash, rol)
+                    VALUES (%s, %s, %s, %s, 'cliente')
+                """, (nombre, apellido_p, email, password_segura))
+                conexion.commit()
+                nuevo_id = cursor.lastrowid
+            conexion.close()
+
+            # Iniciar sesión automáticamente al registrarse
+            session.permanent = True
+            session["usuario_id"] = nuevo_id
+            session["usuario_nombre"] = nombre
+            session["es_admin"] = False
+            return redirect(url_for("index"))
+
+        except Exception as err:
+            print(f"--> Error registrando cliente en Aiven: {err}")
+            flash("No se pudo completar el registro. Intenta de nuevo.")
+
+    return render_template("registro.html")
+
+
+# --- REGISTRO PRIVADO DE NUEVO ADMINISTRADOR ---
+@app.route("/admin/nuevo-admin", methods=["GET", "POST"])
+def nuevo_admin():
+    if not session.get("es_admin"):
+        flash("Acceso restringido únicamente para administradores.")
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        nombre = request.form.get("nombre", "").strip()
+        apellido_p = request.form.get("apellido_paterno", "").strip()
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "").strip()
+
+        password_segura = generate_password_hash(password)
+
+        try:
+            conexion = obtener_conexion()
+            with conexion.cursor() as cursor:
+                cursor.execute("SELECT id_usuario FROM usuarios WHERE LOWER(email) = %s", (email,))
+                if cursor.fetchone():
+                    flash("Ese correo ya existe en el sistema.")
+                    return redirect(url_for("nuevo_admin"))
+
+                cursor.execute("""
+                    INSERT INTO usuarios (nombre, apellido_paterno, email, password_hash, rol)
+                    VALUES (%s, %s, %s, %s, 'admin')
+                """, (nombre, apellido_p, email, password_segura))
+                conexion.commit()
+            conexion.close()
+            flash(f"Administrador {nombre} creado exitosamente.")
+            return redirect(url_for("index"))
+        except Exception as err:
+            print(f"--> Error creando admin en Aiven: {err}")
+            flash("Error al guardar el administrador.")
+
+    return render_template("nuevo_admin.html")
 
 if __name__ == "__main__":
     puerto = int(os.getenv("PORT", 5000))
