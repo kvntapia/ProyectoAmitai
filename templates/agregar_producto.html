@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='diseño.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='estilos.css') }}">
   <style>
     .admin-form-container {
       max-width: 580px;
@@ -29,16 +29,17 @@
       font-weight: 600;
       color: #0f172a;
     }
-    .form-group input, .form-group select {
+    .form-group input, .form-group select, .form-group textarea {
       padding: 0.75rem 1rem;
       border: 1px solid #e2e8f0;
       border-radius: 8px;
       font-size: 0.95rem;
+      font-family: inherit;
       outline: none;
       background: #f8fafc;
       transition: all 0.2s ease;
     }
-    .form-group input:focus, .form-group select:focus {
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
       border-color: #2563eb;
       background: #ffffff;
       box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
@@ -51,7 +52,6 @@
   </style>
 </head>
 <body style="background-color: #f8fafc;">
-
   <header class="navbar">
     <div class="nav-container">
       <a href="/" class="brand-logo">
@@ -90,6 +90,11 @@
         </div>
 
         <div class="form-group">
+          <label for="descripcion">Especificaciones / Descripción</label>
+          <textarea name="descripcion" id="descripcion" rows="3" placeholder="Ej. Pantalla OLED 6.7 pulgadas, 256GB almacenamiento, cámara 48MP..."></textarea>
+        </div>
+
+        <div class="form-group">
           <label for="imagen_url">URL de Imagen (Opcional)</label>
           <input type="url" name="imagen_url" id="imagen_url" placeholder="https://ejemplo.com/foto.jpg">
           <span class="helper-text">Si dejas este campo en blanco, se asignará automáticamente la imagen genérica de la marca.</span>
@@ -102,6 +107,5 @@
       </form>
     </div>
   </main>
-
 </body>
 </html>

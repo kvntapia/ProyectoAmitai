@@ -6,14 +6,13 @@ import random
 from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = "clave_secreta_prodevice_2026_segura"
+app.secret_key = os.getenv("SECRET_KEY", "clave_secreta_prodevice_2026_segura")
 
-# Asegurar persistencia de la cookie de sesión
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-app.config["SESSION_COOKIE_SECURE"] = False  # Permite funcionar sobre HTTP sin certificado SSL local
+app.config["SESSION_COOKIE_SECURE"] = False
 
-# 1. Definir la función de conexión antes de usarla en las rutas
+
 def obtener_conexion():
     return pymysql.connect(
         host=os.getenv("MYSQLHOST"),
@@ -26,6 +25,7 @@ def obtener_conexion():
         connect_timeout=5
     )
 
+
 IMAGENES_MARCAS = {
     "apple": "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=600&auto=format&fit=crop&q=80",
     "samsung": "https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=600&auto=format&fit=crop&q=80",
@@ -34,26 +34,37 @@ IMAGENES_MARCAS = {
     "default": "https://images.unsplash.com/photo-1511707171634-5f897ff02560?w=600&auto=format&fit=crop&q=80"
 }
 
+
 def obtener_imagen_marca(nombre_marca):
     if not nombre_marca:
         return IMAGENES_MARCAS["default"]
     return IMAGENES_MARCAS.get(nombre_marca.strip().lower(), IMAGENES_MARCAS["default"])
 
+
 PRODUCTOS_DEMO = [
-    {"id_producto": 1, "marca": "Apple", "modelo": "iPhone 17 Pro Max", "precio": 30999.00, "imagen_url": obtener_imagen_marca("Apple")},
-    {"id_producto": 2, "marca": "Apple", "modelo": "iPhone 16", "precio": 19499.00, "imagen_url": obtener_imagen_marca("Apple")},
-    {"id_producto": 3, "marca": "Samsung", "modelo": "Galaxy S26 Ultra", "precio": 27499.00, "imagen_url": obtener_imagen_marca("Samsung")},
-    {"id_producto": 4, "marca": "Samsung", "modelo": "Galaxy A55", "precio": 8999.00, "imagen_url": obtener_imagen_marca("Samsung")},
-    {"id_producto": 5, "marca": "Xiaomi", "modelo": "Xiaomi 15 Pro", "precio": 18999.00, "imagen_url": obtener_imagen_marca("Xiaomi")},
-    {"id_producto": 6, "marca": "Motorola", "modelo": "Edge 50 Ultra", "precio": 14999.00, "imagen_url": obtener_imagen_marca("Motorola")}
+    {"id_producto": 1, "marca": "Apple", "modelo": "iPhone 17 Pro Max", "precio": 30999.00, "descripcion": "Pantalla Super Retina XDR de 6.9 pulgadas, chip A19 Pro, sistema de cámaras Pro de 48 MP y titanio de grado aeroespacial.", "imagen_url": obtener_imagen_marca("Apple")},
+    {"id_producto": 2, "marca": "Apple", "modelo": "iPhone 16", "precio": 19499.00, "descripcion": "Pantalla OLED de 6.1 pulgadas, chip A18, Control de Cámara dedicado y batería de larga duración.", "imagen_url": obtener_imagen_marca("Apple")},
+    {"id_producto": 3, "marca": "Samsung", "modelo": "Galaxy S26 Ultra", "precio": 27499.00, "descripcion": "Pantalla Dynamic AMOLED 2X QHD+ de 6.8 pulgadas, S Pen integrado, cámara principal de 200 MP y Galaxy AI.", "imagen_url": obtener_imagen_marca("Samsung")},
+    {"id_producto": 4, "marca": "Samsung", "modelo": "Galaxy A55", "precio": 8999.00, "descripcion": "Pantalla Super AMOLED FHD+ de 6.6 pulgadas a 120 Hz, resistencia al agua IP67 y batería de 5,000 mAh.", "imagen_url": obtener_imagen_marca("Samsung")},
+    {"id_producto": 5, "marca": "Xiaomi", "modelo": "Xiaomi 15 Pro", "precio": 18999.00, "descripcion": "Óptica profesional Leica Summilux, procesador Snapdragon de última generación y carga rápida HyperCharge de 120W.", "imagen_url": obtener_imagen_marca("Xiaomi")},
+    {"id_producto": 6, "marca": "Motorola", "modelo": "Edge 50 Ultra", "precio": 14999.00, "descripcion": "Pantalla pOLED curva de 144 Hz, cámara teleobjetivo con zoom óptico 3x y carga TurboPower de 125W.", "imagen_url": obtener_imagen_marca("Motorola")}
 ]
+
+
+def asegurar_columna_descripcion(cursor):
+    try:
+        cursor.execute("ALTER TABLE productos ADD COLUMN descripcion TEXT")
+    except Exception:
+        pass
+
 
 def obtener_catalogo():
     try:
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
+            asegurar_columna_descripcion(cursor)
             cursor.execute("""
-                SELECT p.id_producto, p.modelo, p.precio, p.imagen_url, m.nombre AS marca
+                SELECT p.id_producto, p.modelo, p.precio, p.imagen_url, p.descripcion, m.nombre AS marca
                 FROM productos p
                 JOIN marcas m ON p.id_marca = m.id_marca
                 ORDER BY p.id_producto DESC
@@ -68,10 +79,13 @@ def obtener_catalogo():
         print(f"--> Error leyendo catálogo desde Aiven: {err}")
         return PRODUCTOS_DEMO
 
+
 @app.route("/logout")
 def logout():
     session.clear()
+    flash("Has cerrado sesión correctamente.")
     return redirect(url_for("index"))
+
 
 @app.route("/")
 def index():
@@ -81,11 +95,9 @@ def index():
     todos = obtener_catalogo()
     productos_filtrados = todos
 
-    # 1. Filtro por marca
     if marca_filtro and marca_filtro.lower() != "todos":
         productos_filtrados = [p for p in productos_filtrados if p["marca"].lower() == marca_filtro.lower()]
 
-    # 2. Filtro por buscador
     if busqueda:
         termino = busqueda.lower()
         productos_filtrados = [
@@ -93,7 +105,6 @@ def index():
             if termino in p["modelo"].lower() or termino in p["marca"].lower()
         ]
 
-    # Conteo de ítems en carrito para la burbuja roja/azul
     carrito = session.get("carrito", [])
     total_articulos = sum(item.get("cantidad", 1) for item in carrito)
 
@@ -105,6 +116,20 @@ def index():
         total_carrito=total_articulos
     )
 
+
+@app.route("/producto/<int:id_producto>")
+def detalle_producto(id_producto):
+    todos = obtener_catalogo()
+    producto = next((p for p in todos if p["id_producto"] == id_producto), None)
+    if not producto:
+        flash("El dispositivo solicitado no fue encontrado.")
+        return redirect(url_for("index"))
+
+    carrito = session.get("carrito", [])
+    total_articulos = sum(item.get("cantidad", 1) for item in carrito)
+    return render_template("detalle_producto.html", producto=producto, total_carrito=total_articulos)
+
+
 @app.route("/agregar-al-carrito/<int:id_producto>")
 def agregar_al_carrito(id_producto):
     if "carrito" not in session:
@@ -115,7 +140,6 @@ def agregar_al_carrito(id_producto):
     producto = next((p for p in todos if p["id_producto"] == id_producto), None)
 
     if producto:
-        # Verificar si ya estaba agregado para aumentar cantidad
         item_existente = next((item for item in carrito if item["id_producto"] == id_producto), None)
         if item_existente:
             item_existente["cantidad"] += 1
@@ -129,18 +153,52 @@ def agregar_al_carrito(id_producto):
                 "cantidad": 1
             })
         session.modified = True
+        flash(f"'{producto['modelo']}' se agregó a tu carrito.")
 
-    # Redirige a la misma página donde estaba el usuario
     return redirect(request.referrer or url_for("index"))
+
+
+@app.route("/carrito")
+def ver_carrito():
+    carrito = session.get("carrito", [])
+    subtotal = sum(item["precio"] * item["cantidad"] for item in carrito)
+    total_articulos = sum(item["cantidad"] for item in carrito)
+    return render_template("carrito.html", carrito=carrito, subtotal=subtotal, total_carrito=total_articulos)
+
+
+@app.route("/actualizar-carrito/<int:id_producto>/<accion>")
+def actualizar_carrito(id_producto, accion):
+    carrito = session.get("carrito", [])
+    for item in carrito:
+        if item["id_producto"] == id_producto:
+            if accion == "sumar":
+                item["cantidad"] += 1
+            elif accion == "restar":
+                item["cantidad"] -= 1
+            break
+
+    if accion == "eliminar":
+        carrito = [item for item in carrito if item["id_producto"] != id_producto]
+    else:
+        carrito = [item for item in carrito if item["cantidad"] > 0]
+
+    session["carrito"] = carrito
+    session.modified = True
+    return redirect(url_for("ver_carrito"))
+
+
+@app.route("/vaciar-carrito")
+def vaciar_carrito():
+    session.pop("carrito", None)
+    return redirect(url_for("ver_carrito"))
+
 
 @app.route("/admin/agregar-producto", methods=["GET", "POST"])
 def agregar_producto():
-    # 1. Protección: Solo administradores pueden ingresar
     if not session.get("es_admin"):
         flash("Acceso restringido únicamente para administradores.")
         return redirect(url_for("login"))
 
-    # Lista predeterminada de marcas para el selector
     marcas_disponibles = [
         {"id_marca": 1, "nombre": "Apple"},
         {"id_marca": 2, "nombre": "Samsung"},
@@ -153,21 +211,19 @@ def agregar_producto():
         modelo = request.form.get("modelo", "").strip()
         precio_raw = request.form.get("precio", "0").strip()
         imagen_personalizada = request.form.get("imagen_url", "").strip()
+        descripcion = request.form.get("descripcion", "").strip()
 
         try:
             precio = float(precio_raw)
         except ValueError:
             precio = 0.0
 
-        # Asignar la imagen genérica si no se proporcionó una URL específica
         imagen_final = imagen_personalizada if imagen_personalizada else obtener_imagen_marca(marca_seleccionada)
 
-        # 2. Intentar guardar en la Base de Datos si hay conexión
-        guardado_en_bd = False
         try:
             conexion = obtener_conexion()
             with conexion.cursor() as cursor:
-                # Buscar o insertar marca
+                asegurar_columna_descripcion(cursor)
                 cursor.execute("SELECT id_marca FROM marcas WHERE LOWER(nombre) = %s", (marca_seleccionada.lower(),))
                 marca_row = cursor.fetchone()
                 if marca_row:
@@ -177,39 +233,29 @@ def agregar_producto():
                     conexion.commit()
                     id_marca = cursor.lastrowid
 
-                # Insertar producto
                 cursor.execute("""
-                    INSERT INTO productos (id_marca, modelo, precio, imagen_url)
-                    VALUES (%s, %s, %s, %s)
-                """, (id_marca, modelo, precio, imagen_final))
+                    INSERT INTO productos (id_marca, modelo, precio, imagen_url, descripcion)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (id_marca, modelo, precio, imagen_final, descripcion))
                 conexion.commit()
-                guardado_en_bd = True
             conexion.close()
-            print(f"--> Producto '{modelo}' guardado exitosamente en BD.")
         except Exception as err:
-            print(f"--> Base de datos no disponible ({err}). Guardando en catálogo local temporal.")
+            print(f"--> Error guardando producto en BD: {err}")
 
-        # 3. Guardar también en la lista en memoria (garantiza que se vea al instante)
         nuevo_id = max([p["id_producto"] for p in PRODUCTOS_DEMO], default=0) + 1
-        nuevo_producto = {
+        PRODUCTOS_DEMO.insert(0, {
             "id_producto": nuevo_id,
             "marca": marca_seleccionada,
             "modelo": modelo,
             "precio": precio,
+            "descripcion": descripcion,
             "imagen_url": imagen_final
-        }
-        PRODUCTOS_DEMO.insert(0, nuevo_producto)  # Lo colocamos al inicio de la lista
-
+        })
+        flash(f"Dispositivo '{modelo}' publicado correctamente.")
         return redirect(url_for("index"))
 
     return render_template("agregar_producto.html", marcas=marcas_disponibles)
 
-@app.route("/carrito")
-def ver_carrito():
-    carrito = session.get("carrito", [])
-    subtotal = sum(item["precio"] * item["cantidad"] for item in carrito)
-    total_articulos = sum(item["cantidad"] for item in carrito)
-    return render_template("carrito.html", carrito=carrito, subtotal=subtotal, total_carrito=total_articulos)
 
 @app.route("/admin/editar-producto/<int:id_producto>", methods=["GET", "POST"])
 def editar_producto(id_producto):
@@ -224,13 +270,13 @@ def editar_producto(id_producto):
         {"id_marca": 4, "nombre": "Motorola"}
     ]
 
-    # 1. Obtener los datos actuales del producto
     producto = None
     try:
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
+            asegurar_columna_descripcion(cursor)
             cursor.execute("""
-                SELECT p.id_producto, p.modelo, p.precio, p.imagen_url, m.nombre AS marca
+                SELECT p.id_producto, p.modelo, p.precio, p.imagen_url, p.descripcion, m.nombre AS marca
                 FROM productos p
                 JOIN marcas m ON p.id_marca = m.id_marca
                 WHERE p.id_producto = %s
@@ -244,12 +290,12 @@ def editar_producto(id_producto):
         flash("El producto no existe.")
         return redirect(url_for("index"))
 
-    # 2. Guardar modificaciones
     if request.method == "POST":
         nueva_marca = request.form.get("marca")
         nuevo_modelo = request.form.get("modelo", "").strip()
         precio_raw = request.form.get("precio", "0").strip()
         nueva_imagen = request.form.get("imagen_url", "").strip()
+        nueva_descripcion = request.form.get("descripcion", "").strip()
 
         try:
             nuevo_precio = float(precio_raw)
@@ -258,34 +304,33 @@ def editar_producto(id_producto):
 
         imagen_final = nueva_imagen if nueva_imagen else obtener_imagen_marca(nueva_marca)
 
-        # Actualizar en BD si hay conexión
         try:
             conexion = obtener_conexion()
             with conexion.cursor() as cursor:
-                # Obtener o crear id_marca
                 cursor.execute("SELECT id_marca FROM marcas WHERE LOWER(nombre) = %s", (nueva_marca.lower(),))
                 marca_row = cursor.fetchone()
                 id_marca = marca_row["id_marca"] if marca_row else 1
 
                 cursor.execute("""
                     UPDATE productos
-                    SET id_marca = %s, modelo = %s, precio = %s, imagen_url = %s
+                    SET id_marca = %s, modelo = %s, precio = %s, imagen_url = %s, descripcion = %s
                     WHERE id_producto = %s
-                """, (id_marca, nuevo_modelo, nuevo_precio, imagen_final, id_producto))
+                """, (id_marca, nuevo_modelo, nuevo_precio, imagen_final, nueva_descripcion, id_producto))
                 conexion.commit()
             conexion.close()
         except Exception as err:
-            print(f"--> Aviso: Actualizando en memoria local ({err})")
+            print(f"--> Error actualizando producto en BD: {err}")
 
-        # Actualizar en memoria local demo
         for p in PRODUCTOS_DEMO:
             if p["id_producto"] == id_producto:
                 p["marca"] = nueva_marca
                 p["modelo"] = nuevo_modelo
                 p["precio"] = nuevo_precio
                 p["imagen_url"] = imagen_final
+                p["descripcion"] = nueva_descripcion
                 break
 
+        flash(f"Cambios guardados en '{nuevo_modelo}'.")
         return redirect(url_for("index"))
 
     return render_template("editar_producto.html", producto=producto, marcas=marcas_disponibles)
@@ -297,7 +342,6 @@ def eliminar_producto(id_producto):
         flash("Acceso restringido únicamente para administradores.")
         return redirect(url_for("login"))
 
-    # Intentar eliminar de BD
     try:
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
@@ -305,44 +349,18 @@ def eliminar_producto(id_producto):
             conexion.commit()
         conexion.close()
     except Exception as err:
-        print(f"--> Aviso: Eliminando de memoria local ({err})")
+        print(f"--> Error eliminando de BD: {err}")
 
-    # Eliminar de la lista local en memoria
     global PRODUCTOS_DEMO
     PRODUCTOS_DEMO = [p for p in PRODUCTOS_DEMO if p["id_producto"] != id_producto]
 
-    # Si estaba en el carrito de compras, removerlo
     if "carrito" in session:
         session["carrito"] = [item for item in session["carrito"] if item["id_producto"] != id_producto]
         session.modified = True
 
+    flash("Dispositivo eliminado del catálogo.")
     return redirect(url_for("index"))
 
-@app.route("/vaciar-carrito")
-def vaciar_carrito():
-    session.pop("carrito", None)
-    return redirect(url_for("ver_carrito"))
-
-@app.route("/actualizar-carrito/<int:id_producto>/<accion>")
-def actualizar_carrito(id_producto, accion):
-    carrito = session.get("carrito", [])
-    for item in carrito:
-        if item["id_producto"] == id_producto:
-            if accion == "sumar":
-                item["cantidad"] += 1
-            elif accion == "restar":
-                item["cantidad"] -= 1
-            break
-
-    # Filtrar artículos cuya cantidad haya llegado a 0 o hayan sido eliminados
-    if accion == "eliminar":
-        carrito = [item for item in carrito if item["id_producto"] != id_producto]
-    else:
-        carrito = [item for item in carrito if item["cantidad"] > 0]
-
-    session["carrito"] = carrito
-    session.modified = True
-    return redirect(url_for("ver_carrito"))
 
 @app.route("/checkout", methods=["GET", "POST"])
 def checkout():
@@ -368,11 +386,9 @@ def checkout():
         numero_orden = f"PD-{random.randint(100000, 999999)}"
         fecha_orden = datetime.now().strftime("%d/%m/%Y %H:%M")
 
-        # Guardar orden y sus artículos en Aiven
         try:
             conexion = obtener_conexion()
             with conexion.cursor() as cursor:
-
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS ordenes (
                         id_orden INT AUTO_INCREMENT PRIMARY KEY,
@@ -398,7 +414,6 @@ def checkout():
                         FOREIGN KEY (id_orden) REFERENCES ordenes(id_orden) ON DELETE CASCADE
                     )
                 """)
-
                 cursor.execute("""
                     INSERT INTO ordenes (folio, cliente_nombre, cliente_email, direccion_envio, metodo_pago, subtotal, costo_envio, total)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
@@ -413,11 +428,10 @@ def checkout():
 
             conexion.commit()
             conexion.close()
-            print(f"--> Orden {numero_orden} registrada en Aiven correctamente.")
         except Exception as err:
             print(f"--> Error guardando orden en Aiven: {err}")
 
-        detalles_orden = {
+        session["ultima_orden"] = {
             "folio": numero_orden,
             "cliente": nombre,
             "email": email,
@@ -429,12 +443,19 @@ def checkout():
             "total": total,
             "fecha": fecha_orden
         }
-
-        session["ultima_orden"] = detalles_orden
         session.pop("carrito", None)
         return redirect(url_for("confirmacion_pedido"))
 
     return render_template("checkout.html", carrito=carrito, subtotal=subtotal, envio=costo_envio, total=total)
+
+
+@app.route("/confirmacion")
+def confirmacion_pedido():
+    orden = session.get("ultima_orden")
+    if not orden:
+        return redirect(url_for("index"))
+    return render_template("confirmacion.html", orden=orden)
+
 
 @app.route("/admin/ordenes")
 def ver_ordenes():
@@ -457,12 +478,6 @@ def ver_ordenes():
 
     return render_template("ordenes_admin.html", ordenes=ordenes)
 
-@app.route("/confirmacion")
-def confirmacion_pedido():
-    orden = session.get("ultima_orden")
-    if not orden:
-        return redirect(url_for("index"))
-    return render_template("confirmacion.html", orden=orden)
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -470,18 +485,14 @@ def login():
         correo = request.form.get("correo", "").strip().lower()
         password = request.form.get("password", "").strip()
 
-        print(f"--> Intento de login recibido: Correo='{correo}' | Password='{password}'")
-
-        # 1. Comprobación directa sin tocar la BD remota:
         if correo == "admin123@gmail.com" and password == "admin123":
             session.permanent = True
             session["usuario_id"] = 1
             session["usuario_nombre"] = "Kevin Tapia Joachin"
             session["es_admin"] = True
-            print("--> ¡Acceso concedido exitosamente como Administrador!")
+            flash("Bienvenido, Administrador.")
             return redirect(url_for("index"))
 
-        # 2. Si no coincide con las credenciales maestras, recién intenta la BD:
         try:
             conexion = obtener_conexion()
             with conexion.cursor() as cursor:
@@ -500,6 +511,7 @@ def login():
                     session["usuario_id"] = usuario.get("id_usuario")
                     session["usuario_nombre"] = usuario.get("nombre")
                     session["es_admin"] = (usuario.get("rol") == "admin")
+                    flash(f"Hola de nuevo, {usuario.get('nombre')}.")
                     return redirect(url_for("index"))
         except Exception as err:
             print(f"--> Error consultando usuario en BD: {err}")
@@ -508,9 +520,7 @@ def login():
 
     return render_template("login.html")
 
-from werkzeug.security import generate_password_hash, check_password_hash
 
-# --- REGISTRO PÚBLICO PARA CLIENTES ---
 @app.route("/registro", methods=["GET", "POST"])
 def registro():
     if request.method == "POST":
@@ -537,11 +547,11 @@ def registro():
                 nuevo_id = cursor.lastrowid
             conexion.close()
 
-            # Iniciar sesión automáticamente al registrarse
             session.permanent = True
             session["usuario_id"] = nuevo_id
             session["usuario_nombre"] = nombre
             session["es_admin"] = False
+            flash("¡Cuenta creada con éxito! Bienvenido a ProDevice.")
             return redirect(url_for("index"))
 
         except Exception as err:
@@ -551,7 +561,6 @@ def registro():
     return render_template("registro.html")
 
 
-# --- REGISTRO PRIVADO DE NUEVO ADMINISTRADOR ---
 @app.route("/admin/nuevo-admin", methods=["GET", "POST"])
 def nuevo_admin():
     if not session.get("es_admin"):
@@ -580,13 +589,14 @@ def nuevo_admin():
                 """, (nombre, apellido_p, email, password_segura))
                 conexion.commit()
             conexion.close()
-            flash(f"Administrador {nombre} creado exitosamente.")
+            flash(f"Administrador {nombre} registrado exitosamente.")
             return redirect(url_for("index"))
         except Exception as err:
             print(f"--> Error creando admin en Aiven: {err}")
             flash("Error al guardar el administrador.")
 
     return render_template("nuevo_admin.html")
+
 
 if __name__ == "__main__":
     puerto = int(os.getenv("PORT", 5000))
