@@ -49,20 +49,13 @@ PRODUCTOS_DEMO = [
 
 def obtener_catalogo():
     try:
-        conexion = pymysql.connect(
-            host=os.getenv("MYSQLHOST", "acela.proxy.rlwy.net"),
-            port=int(os.getenv("MYSQLPORT", 12345)),
-            user=os.getenv("MYSQLUSER", "root"),
-            password=os.getenv("MYSQLPASSWORD", "clHhMVdjElOlchBapbLCJwxIgWSkLlXL"),
-            database=os.getenv("MYSQLDATABASE", "railway"),
-            cursorclass=pymysql.cursors.DictCursor,
-            connect_timeout=3
-        )
+        conexion = obtener_conexion()
         with conexion.cursor() as cursor:
             cursor.execute("""
                 SELECT p.id_producto, p.modelo, p.precio, p.imagen_url, m.nombre AS marca
                 FROM productos p
                 JOIN marcas m ON p.id_marca = m.id_marca
+                ORDER BY p.id_producto DESC
             """)
             productos = cursor.fetchall()
             for p in productos:
@@ -70,7 +63,8 @@ def obtener_catalogo():
                     p["imagen_url"] = obtener_imagen_marca(p.get("marca"))
         conexion.close()
         return productos
-    except Exception:
+    except Exception as err:
+        print(f"--> Error leyendo catálogo desde Aiven: {err}")
         return PRODUCTOS_DEMO
 
 @app.route("/logout")
