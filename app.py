@@ -15,13 +15,14 @@ app.config["SESSION_COOKIE_SECURE"] = False  # Permite funcionar sobre HTTP sin 
 # 1. Definir la función de conexión antes de usarla en las rutas
 def obtener_conexion():
     return pymysql.connect(
-        host=os.getenv("MYSQLHOST", "acela.proxy.rlwy.net"),
-        port=int(os.getenv("MYSQLPORT", 12345)),
-        user=os.getenv("MYSQLUSER", "root"),
-        password=os.getenv("MYSQLPASSWORD", "clHhMVdjElOlchBapbLCJwxIgWSkLlXL"),
-        database=os.getenv("MYSQLDATABASE", "railway"),
+        host=os.getenv("MYSQLHOST"),
+        port=int(os.getenv("MYSQLPORT", 3306)),
+        user=os.getenv("MYSQLUSER"),
+        password=os.getenv("MYSQLPASSWORD"),
+        database=os.getenv("MYSQLDATABASE"),
         cursorclass=pymysql.cursors.DictCursor,
-        connect_timeout=3
+        ssl={"ssl": {}},
+        connect_timeout=5
     )
 
 IMAGENES_MARCAS = {
