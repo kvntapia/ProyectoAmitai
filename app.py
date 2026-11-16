@@ -339,10 +339,11 @@ def checkout():
         email = request.form.get("email", "").strip()
         direccion = request.form.get("direccion", "").strip()
         ciudad = request.form.get("ciudad", "").strip()
+        estado = request.form.get("estado", "").strip()
         cp = request.form.get("cp", "").strip()
         metodo_pago = request.form.get("metodo_pago", "Tarjeta")
 
-        direccion_completa = f"{direccion}, {ciudad} (CP {cp})"
+        direccion_completa = f"{direccion}, {ciudad}, {estado} (CP {cp})"
         numero_orden = f"PD-{random.randint(100000, 999999)}"
         fecha_orden = datetime.now().strftime("%d/%m/%Y %H:%M")
 
@@ -350,6 +351,33 @@ def checkout():
         try:
             conexion = obtener_conexion()
             with conexion.cursor() as cursor:
+
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS ordenes (
+                        id_orden INT AUTO_INCREMENT PRIMARY KEY,
+                        folio VARCHAR(20) NOT NULL UNIQUE,
+                        cliente_nombre VARCHAR(150) NOT NULL,
+                        cliente_email VARCHAR(150) NOT NULL,
+                        direccion_envio VARCHAR(300) NOT NULL,
+                        metodo_pago VARCHAR(50) NOT NULL,
+                        subtotal DECIMAL(10, 2) NOT NULL,
+                        costo_envio DECIMAL(10, 2) NOT NULL,
+                        total DECIMAL(10, 2) NOT NULL,
+                        fecha_orden DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS detalle_orden (
+                        id_detalle INT AUTO_INCREMENT PRIMARY KEY,
+                        id_orden INT NOT NULL,
+                        id_producto INT,
+                        modelo_producto VARCHAR(120) NOT NULL,
+                        cantidad INT NOT NULL,
+                        precio_unitario DECIMAL(10, 2) NOT NULL,
+                        FOREIGN KEY (id_orden) REFERENCES ordenes(id_orden) ON DELETE CASCADE
+                    )
+                """)
+
                 cursor.execute("""
                     INSERT INTO ordenes (folio, cliente_nombre, cliente_email, direccion_envio, metodo_pago, subtotal, costo_envio, total)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)

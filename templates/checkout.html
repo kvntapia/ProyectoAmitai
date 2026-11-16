@@ -122,7 +122,7 @@
   <main class="main-content">
     <form method="POST" action="/checkout">
       <div class="checkout-layout">
-        
+
         <!-- Columna Izquierda: Datos del Comprador -->
         <div class="checkout-card">
           <h2 class="section-title">
@@ -132,29 +132,32 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label for="nombre">Nombre Completo</label>
-              <input type="text" id="nombre" name="nombre" placeholder="Ej. Juan Pérez" required>
+              <label for="ciudad">Ciudad / Municipio</label>
+              <input type="text" id="ciudad" name="ciudad" placeholder="Ej. Minatitlán" required>
             </div>
             <div class="form-group">
-              <label for="email">Correo Electrónico</label>
-              <input type="email" id="email" name="email" placeholder="ejemplo@correo.com" required>
+              <label for="estado">Estado</label>
+              <select id="estado" name="estado" required>
+                <option value="" disabled selected>Selecciona un estado...</option>
+                <option value="Veracruz">Veracruz</option>
+                <option value="Ciudad de México">Ciudad de México</option>
+                <option value="Jalisco">Jalisco</option>
+                <option value="Nuevo León">Nuevo León</option>
+                <option value="Puebla">Puebla</option>
+                <option value="Tabasco">Tabasco</option>
+                <option value="Oaxaca">Oaxaca</option>
+                <option value="Chiapas">Chiapas</option>
+                <option value="Estado de México">Estado de México</option>
+                <option value="Querétaro">Querétaro</option>
+                <option value="Otro">Otro estado</option>
+              </select>
             </div>
           </div>
 
-          <div class="form-group">
-            <label for="direccion">Calle, Número y Colonia</label>
-            <input type="text" id="direccion" name="direccion" placeholder="Av. Universidad #123, Col. Centro" required>
+          <div class="form-group" style="max-width: 220px;">
+            <label for="cp">Código Postal</label>
+            <input type="text" id="cp" name="cp" placeholder="96700" maxlength="5" required>
           </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="ciudad">Ciudad y Estado</label>
-              <input type="text" id="ciudad" name="ciudad" placeholder="Minatitlán, Veracruz" required>
-            </div>
-            <div class="form-group">
-              <label for="cp">Código Postal</label>
-              <input type="text" id="cp" name="cp" placeholder="96700" required>
-            </div>
           </div>
 
           <h2 class="section-title" style="margin-top: 1.5rem;">
